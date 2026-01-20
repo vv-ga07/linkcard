@@ -41,9 +41,9 @@ def create_linkcard_image(input_file, output_file, target_width=1200, target_hei
         if icon.mode != 'RGBA':
             icon = icon.convert('RGBA')
         
-        # 透明度を調整（50%透明にする）
+        # 透明度を調整（70%不透明にする）
         alpha = icon.split()[3]  # アルファチャンネルを取得
-        alpha = alpha.point(lambda x: int(x * 0.5))  # 透明度を50%に
+        alpha = alpha.point(lambda x: int(x * 0.7))  # 透明度を70%に
         icon.putalpha(alpha)
         
         # アイコンのサイズを調整（400px程度）
