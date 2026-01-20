@@ -147,8 +147,8 @@ if __name__ == "__main__":
     create_custom_linkcard(
         image_filename="card_image_v3.png",
         redirect_url=redirect_url,
-        title="このサイトはスマートフォン専用です。QRコードを読み取ってからご確認ください。",
-        description="このサイトはスマートフォン専用です。",
+        title="配信先♡",
+        description="",
         display_url="https://sato-117.github.io/linkcard",
         output_html="linkcard.html",
         base_url="https://sato-117.github.io/linkcard"
