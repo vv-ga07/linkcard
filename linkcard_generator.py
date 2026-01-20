@@ -131,95 +131,90 @@ class MetadataFetcher:
 
 
 class CardGenerator:
-    """リンクカード画像を生成するクラス"""
+    """リンクカード画像を生成するクラス（YouTubeサムネイル風）"""
     
     def __init__(self):
         self.width = 1200
         self.height = 630
-        self.bg_color = (255, 255, 255)
+        self.bg_color = (30, 30, 30)  # ダークグレー背景
         
     def generate(self, metadata: dict, output_path: str):
-        """カード画像を生成"""
+        """カード画像を生成（YouTubeサムネイル風）"""
         # キャンバス作成
         img = Image.new('RGB', (self.width, self.height), self.bg_color)
-        draw = ImageDraw.Draw(img)
         
-        # フォント設定（システムフォントを使用）
-        try:
-            title_font = ImageFont.truetype("msgothic.ttc", 48)
-            desc_font = ImageFont.truetype("msgothic.ttc", 28)
-            url_font = ImageFont.truetype("msgothic.ttc", 24)
-        except:
-            # フォントが見つからない場合はデフォルト
-            title_font = ImageFont.load_default()
-            desc_font = ImageFont.load_default()
-            url_font = ImageFont.load_default()
-        
-        # サムネイル画像（左側）
-        thumbnail_x = 50
-        thumbnail_y = 50
-        thumbnail_width = 400
-        thumbnail_height = 530
-        
+        # サムネイル画像を全面に配置
         if metadata['image']:
             try:
                 thumb_img = self._download_image(metadata['image'])
                 if thumb_img:
-                    # リサイズして配置
-                    thumb_img = self._resize_image(thumb_img, thumbnail_width, thumbnail_height)
-                    img.paste(thumb_img, (thumbnail_x, thumbnail_y))
-                else:
-                    # プレースホルダー
-                    draw.rectangle(
-                        [(thumbnail_x, thumbnail_y), 
-                         (thumbnail_x + thumbnail_width, thumbnail_y + thumbnail_height)],
-                        fill=(240, 240, 240),
-                        outline=(200, 200, 200),
-                        width=2
-                    )
-            except:
-                # エラー時はプレースホルダー
-                draw.rectangle(
-                    [(thumbnail_x, thumbnail_y), 
-                     (thumbnail_x + thumbnail_width, thumbnail_y + thumbnail_height)],
-                    fill=(240, 240, 240),
-                    outline=(200, 200, 200),
-                    width=2
-                )
-        else:
-            # 画像なしの場合はプレースホルダー
-            draw.rectangle(
-                [(thumbnail_x, thumbnail_y), 
-                 (thumbnail_x + thumbnail_width, thumbnail_y + thumbnail_height)],
-                fill=(240, 240, 240),
-                outline=(200, 200, 200),
-                width=2
+                    # 画像を1200x630にフィット（アスペクト比を保ちつつクロップ）
+                    thumb_img = self._resize_and_crop(thumb_img, self.width, self.height)
+                    img.paste(thumb_img, (0, 0))
+            except Exception as e:
+                print(f"画像の読み込みに失敗: {e}")
+                # 背景色のまま
+        
+        # 半透明のグラデーションオーバーレイを作成（下部を暗く）
+        overlay = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        
+        # グラデーション（下部200pxを徐々に暗く）
+        gradient_height = 300
+        for y in range(gradient_height):
+            alpha = int((y / gradient_height) * 180)  # 0→180の透明度
+            overlay_draw.rectangle(
+                [(0, self.height - gradient_height + y), (self.width, self.height - gradient_height + y + 1)],
+                fill=(0, 0, 0, alpha)
             )
         
-        # テキスト領域
-        text_x = 500
-        text_width = 650
+        # オーバーレイを合成
+        img = img.convert('RGBA')
+        img = Image.alpha_composite(img, overlay)
+        img = img.convert('RGB')
         
-        # タイトル
+        # テキストを描画
+        draw = ImageDraw.Draw(img)
+        
+        # フォント設定
+        try:
+            title_font = ImageFont.truetype("msgothic.ttc", 56)
+            desc_font = ImageFont.truetype("msgothic.ttc", 32)
+            url_font = ImageFont.truetype("msgothic.ttc", 24)
+        except:
+            title_font = ImageFont.load_default()
+            desc_font = ImageFont.load_default()
+            url_font = ImageFont.load_default()
+        
+        # テキストのパディング
+        padding_x = 40
+        text_width = self.width - (padding_x * 2)
+        
+        # タイトル（下部に配置）
         title = metadata['title']
-        title_y = 100
+        title_y = self.height - 220
         self._draw_wrapped_text(
-            draw, title, (text_x, title_y), text_width, 
-            title_font, (51, 51, 51), max_lines=3
+            draw, title, (padding_x, title_y), text_width,
+            title_font, (255, 255, 255), max_lines=2
         )
         
-        # 説明文
+        # 説明文（タイトルの下）
         if metadata['description']:
-            desc_y = 300
+            desc_y = self.height - 120
             self._draw_wrapped_text(
-                draw, metadata['description'], (text_x, desc_y), text_width,
-                desc_font, (102, 102, 102), max_lines=4
+                draw, metadata['description'], (padding_x, desc_y), text_width,
+                desc_font, (230, 230, 230), max_lines=2
             )
         
-        # URL（ドメイン）
+        # ドメイン名（右下）
         domain = urlparse(metadata['url']).netloc
-        url_y = 550
-        draw.text((text_x, url_y), domain, font=url_font, fill=(153, 153, 153))
+        url_y = self.height - 40
+        url_x = self.width - padding_x
+        
+        # テキストの幅を計算して右寄せ
+        bbox = draw.textbbox((0, 0), domain, font=url_font)
+        text_width = bbox[2] - bbox[0]
+        draw.text((url_x - text_width, url_y), domain, font=url_font, fill=(200, 200, 200))
         
         # 保存
         img.save(output_path, 'PNG', quality=95)
@@ -237,10 +232,31 @@ class CardGenerator:
             pass
         return None
     
-    def _resize_image(self, img: Image.Image, max_width: int, max_height: int) -> Image.Image:
-        """画像をリサイズ（アスペクト比維持）"""
-        img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-        return img
+    def _resize_and_crop(self, img: Image.Image, target_width: int, target_height: int) -> Image.Image:
+        """画像をリサイズ＆クロップ（アスペクト比を保ちつつ全面に配置）"""
+        # 元の画像のアスペクト比
+        img_ratio = img.width / img.height
+        target_ratio = target_width / target_height
+        
+        if img_ratio > target_ratio:
+            # 画像が横長：高さを合わせて、幅をクロップ
+            new_height = target_height
+            new_width = int(img.width * (target_height / img.height))
+        else:
+            # 画像が縦長：幅を合わせて、高さをクロップ
+            new_width = target_width
+            new_height = int(img.height * (target_width / img.width))
+        
+        # リサイズ
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # 中央でクロップ
+        left = (new_width - target_width) // 2
+        top = (new_height - target_height) // 2
+        right = left + target_width
+        bottom = top + target_height
+        
+        return img.crop((left, top, right, bottom))
     
     def _draw_wrapped_text(self, draw, text: str, position: tuple, max_width: int, 
                            font, color: tuple, max_lines: int = 3):
