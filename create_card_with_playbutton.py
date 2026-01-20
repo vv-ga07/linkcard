@@ -33,39 +33,53 @@ def create_linkcard_image(input_file, output_file, target_width=1200, target_hei
     # RGBAモードに変換（透過処理のため）
     img_rgba = cropped.convert('RGBA')
     
-    # 暗いオーバーレイを追加（25%の黒）控えめに
+    # 暗いオーバーレイを追加（25%の黒）
     overlay = Image.new('RGBA', (target_width, target_height), (0, 0, 0, 64))  # alpha=64は約25%
     img_with_overlay = Image.alpha_composite(img_rgba, overlay)
     
-    # 描画用オブジェクトを作成
-    draw = ImageDraw.Draw(img_with_overlay, 'RGBA')
-    
-    # 再生ボタンの中心位置
-    center_x = target_width // 2
-    center_y = target_height // 2
-    
-    # 円のサイズを小さく
-    circle_radius = 50
-    
-    # 外側の円（白、半透明）控えめに
-    draw.ellipse(
-        [center_x - circle_radius, center_y - circle_radius,
-         center_x + circle_radius, center_y + circle_radius],
-        fill=(255, 255, 255, 180),  # 白、70%不透明
-        outline=(255, 255, 255, 200),
-        width=2
-    )
-    
-    # 再生ボタンの三角形（右向き、グレー）
-    triangle_size = 25
-    # 三角形を少し右にオフセット（視覚的に中央に見えるように）
-    offset_x = 5
-    triangle = [
-        (center_x - triangle_size//2 + offset_x, center_y - triangle_size),  # 上
-        (center_x - triangle_size//2 + offset_x, center_y + triangle_size),  # 下
-        (center_x + triangle_size + offset_x, center_y)  # 右
-    ]
-    draw.polygon(triangle, fill=(60, 60, 60, 255))  # ダークグレー
+    # カスタムアイコンを読み込み
+    try:
+        icon = Image.open('audioicon.png')
+        # RGBAに変換
+        if icon.mode != 'RGBA':
+            icon = icon.convert('RGBA')
+        
+        # アイコンのサイズを調整（リンクカードの1/8程度）
+        icon_size = 150
+        icon.thumbnail((icon_size, icon_size), Image.Resampling.LANCZOS)
+        
+        # 中央に配置
+        center_x = target_width // 2
+        center_y = target_height // 2
+        icon_x = center_x - icon.width // 2
+        icon_y = center_y - icon.height // 2
+        
+        # アイコンを合成
+        img_with_overlay.paste(icon, (icon_x, icon_y), icon)
+        print(f"✅ カスタムアイコン追加: {icon.width}x{icon.height}")
+        
+    except Exception as e:
+        print(f"⚠️ アイコンの読み込みに失敗: {e}")
+        # フォールバック: デフォルトの再生ボタンを描画
+        draw = ImageDraw.Draw(img_with_overlay, 'RGBA')
+        center_x = target_width // 2
+        center_y = target_height // 2
+        circle_radius = 50
+        draw.ellipse(
+            [center_x - circle_radius, center_y - circle_radius,
+             center_x + circle_radius, center_y + circle_radius],
+            fill=(255, 255, 255, 180),
+            outline=(255, 255, 255, 200),
+            width=2
+        )
+        triangle_size = 25
+        offset_x = 5
+        triangle = [
+            (center_x - triangle_size//2 + offset_x, center_y - triangle_size),
+            (center_x - triangle_size//2 + offset_x, center_y + triangle_size),
+            (center_x + triangle_size + offset_x, center_y)
+        ]
+        draw.polygon(triangle, fill=(60, 60, 60, 255))
     
     # RGBに変換して保存
     final_img = img_with_overlay.convert('RGB')
