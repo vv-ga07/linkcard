@@ -44,7 +44,6 @@ def create_custom_linkcard(
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="{display_url}">
     <meta property="og:title" content="{_escape_html(title)}">
     <meta property="og:description" content="{_escape_html(description)}">
     <meta property="og:image" content="{image_url}">
@@ -54,10 +53,10 @@ def create_custom_linkcard(
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="{display_url}">
     <meta name="twitter:title" content="{_escape_html(title)}">
     <meta name="twitter:description" content="{_escape_html(description)}">
     <meta name="twitter:image" content="{image_url}">
+    <meta name="twitter:image:alt" content="{_escape_html(title)}">>
     <meta name="twitter:image:alt" content="{_escape_html(title)}">
     
     <title>{_escape_html(title)}</title>
