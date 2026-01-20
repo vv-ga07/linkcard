@@ -37,9 +37,16 @@ def create_linkcard_image(input_file, output_file, target_width=1200, target_hei
     overlay = Image.new('RGBA', (target_width, target_height), (0, 0, 0, 64))  # alpha=64は約25%
     img_with_overlay = Image.alpha_composite(img_rgba, overlay)
     
-    # カスタムアイコンを読み込み
+    # カスタムアイコンを読み込み（透過版を優先）
     try:
-        icon = Image.open('audioicon.png')
+        # 透過版があればそれを使用
+        try:
+            icon = Image.open('audioicon_transparent.png')
+            print("透過版アイコンを使用")
+        except:
+            icon = Image.open('audioicon.png')
+            print("通常版アイコンを使用")
+        
         # RGBAに変換
         if icon.mode != 'RGBA':
             icon = icon.convert('RGBA')
