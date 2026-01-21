@@ -1,7 +1,7 @@
 """リンクカード用の画像に再生ボタンと暗いオーバーレイを追加"""
 from PIL import Image, ImageDraw
 
-def create_linkcard_image(input_file, output_file, target_width=1200, target_height=630, offset_y=50):
+def create_linkcard_image(input_file, output_file, target_width=1200, target_height=630, offset_y=50, zoom=1.5):
     """
     リンクカード用画像を生成（再生ボタン付き）
     
@@ -11,21 +11,25 @@ def create_linkcard_image(input_file, output_file, target_width=1200, target_hei
         target_width: 目標幅
         target_height: 目標高さ
         offset_y: 切り取り開始位置のオフセット
+        zoom: 拡大倍率（1.0=等倍、1.5=1.5倍拡大）
     """
     # 元画像を読み込み
     img = Image.open(input_file)
     print(f"元画像サイズ: {img.width}x{img.height}")
     
-    # 横幅を1200pxに合わせて拡大・縮小
-    ratio = target_width / img.width
+    # 横幅を1200pxに合わせて拡大・縮小してからさらにzoom倍
+    ratio = (target_width / img.width) * zoom
+    new_width = int(img.width * ratio)
     new_height = int(img.height * ratio)
-    resized = img.resize((target_width, new_height), Image.Resampling.LANCZOS)
-    print(f"リサイズ後: {target_width}x{new_height}")
+    resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    print(f"リサイズ後: {new_width}x{new_height} (zoom={zoom}倍)")
     
-    # 指定位置から切り取り
-    if new_height >= target_height + offset_y:
-        cropped = resized.crop((0, offset_y, target_width, target_height + offset_y))
-        print(f"切り取り: Y={offset_y}から{target_height + offset_y}")
+    # 指定位置から切り取り（中央寄せ）
+    if new_height >= target_height + offset_y and new_width >= target_width:
+        # 横方向は中央から切り取り
+        left = (new_width - target_width) // 2
+        cropped = resized.crop((left, offset_y, left + target_width, target_height + offset_y))
+        print(f"切り取り: X={left}から{left + target_width}, Y={offset_y}から{target_height + offset_y}")
     else:
         cropped = Image.new('RGB', (target_width, target_height), (255, 255, 255))
         cropped.paste(resized, (0, 0))
@@ -43,5 +47,5 @@ def create_linkcard_image(input_file, output_file, target_width=1200, target_hei
     print(f"✅ 再生ボタン付きカードを生成: {output_file}")
 
 if __name__ == "__main__":
-    # live_picture.pngを使用して上部基準でリンクカードを生成
-    create_linkcard_image('live_picture.png', 'card_image_v2.png', offset_y=0)
+    # live_picture.pngを使用して上部基準でリンクカードを生成（1.5倍拡大）
+    create_linkcard_image('live_picture.png', 'card_image_v2.png', offset_y=0, zoom=1.5)
